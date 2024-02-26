@@ -87,10 +87,10 @@ coroutine_mergesort_file(void *context)
         fclose(file);
 
         mergesort(ctx->array_t[index]->array, numbers_count, sizeof(int), int_cmp);
+
     }
 
-    printf("%s: switch count after other function %lld\n", ctx->name,
-           coro_switch_count(this));
+    printf("%s: switch count after other function %lld\n", ctx->name, coro_switch_count(this));
 
 
     my_context_delete(ctx);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 
     coro_sched_init();
     /* Start several coroutines. */
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 6; ++i) {
         char name[16];
         sprintf(name, "coro_%d", i);
         coro_new(coroutine_mergesort_file,
