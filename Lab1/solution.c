@@ -1,26 +1,30 @@
-//
-// Created by Илья Белозеров on 22.01.2024.
-//
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "libcoro.h"
-#include "arrays.h"
+#include "structs.h"
 #include "mergesort.h"
 #include <limits.h>
+#include <time.h>
 
 
-int total_numbers_in_file(FILE *file){
+int
+total_numbers_in_file(FILE *file)
+{
     int count = 0;
     int number;
-    while (fscanf(file, "%d", &number) == 1) {++count;}
+    while (fscanf(file, "%d", &number) == 1) {count++;}
     fseek(file, 0, SEEK_SET);
     return count;
 }
 
-void create_array(FILE *file, int *array){
+void
+create_array(FILE *file, int *array)
+{
     int i = 0;
-    while (fscanf(file, "%d", &array[i]) == 1) {++i;}
+    while (fscanf(file, "%d", &array[i]) == 1) {i++;}
     fseek(file, 0, SEEK_SET);
 }
 
@@ -60,10 +64,21 @@ coroutine_mergesort_file(void *context)
 
     struct coro *this = coro_this();
     struct my_context *ctx = context;
+    int status;
+
+    struct timespec start, end;
+    long long time;
+    long long time_sleep = 0;
 
     printf("Started coroutine %s\n", ctx->name);
 
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     while (ctx->filenames_t->index < ctx->filenames_t->count) {
+
+        struct timespec start_yield, end_yield;
+        double time_yield;
+
         int index = ctx->filenames_t->index;
         char* file_name = ctx->filenames_t->file_names[index];
 
@@ -88,19 +103,40 @@ coroutine_mergesort_file(void *context)
 
         mergesort(ctx->array_t[index]->array, numbers_count, sizeof(int), int_cmp);
 
+        clock_gettime(CLOCK_MONOTONIC, &start_yield);
+        coro_yield();
+        clock_gettime(CLOCK_MONOTONIC, &end_yield);
+
+        time_yield = (end_yield.tv_sec - start_yield.tv_sec) * 1000000LL + (end_yield.tv_nsec - start_yield.tv_nsec) / 1e3;
+        time_sleep += time_yield;
+
+
     }
 
-    printf("%s: switch count after other function %lld\n", ctx->name, coro_switch_count(this));
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time = (end.tv_sec - start.tv_sec) * 1000000LL + (end.tv_nsec - start.tv_nsec) / 1e3;
 
+    long long int switch_count = coro_switch_count(this);
+    printf("%s: количество переключений - %lld, время выполнения: %lld\n", ctx->name, switch_count, time - time_sleep);
+
+    status = coro_status(this);
 
     my_context_delete(ctx);
     /* This will be returned from coro_status(). */
-    return 0;
+    return status;
 }
 
 
 
-int main(int argc, char **argv) {
+int
+main(int argc, char **argv)
+{
+    struct timespec start, end;
+    long long time;
+    int N = 5;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     int n_files = argc - 1;
     int total_numbers_count = 0;
 
@@ -110,11 +146,11 @@ int main(int argc, char **argv) {
 
     coro_sched_init();
     /* Start several coroutines. */
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < N; i++) {
         char name[16];
         sprintf(name, "coro_%d", i);
         coro_new(coroutine_mergesort_file,
-                my_context_new(i, name, &total_numbers_count, &filenames_s, array_s));
+                 my_context_new(i, name, &total_numbers_count, &filenames_s, array_s));
     }
 
     /* Wait for all the coroutines to end. */
@@ -127,9 +163,7 @@ int main(int argc, char **argv) {
     }
 
     FILE *output_file = fopen("out.txt", "w");
-    if (output_file == NULL) {
-        exit(EXIT_FAILURE);
-    }
+    if (output_file == NULL) { exit(EXIT_FAILURE); }
 
     int *result = (int *)calloc(n_files, sizeof(int));
 
@@ -159,6 +193,10 @@ int main(int argc, char **argv) {
         }
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time = (end.tv_sec - start.tv_sec) * 1000000LL + (end.tv_nsec - start.tv_nsec) / 1e3;
+
+
     for (int i = 0; i < n_files; ++i){
         free(array_s[i]->array);
         free(array_s[i]);
@@ -167,6 +205,8 @@ int main(int argc, char **argv) {
     free(result);
     free(array_s);
     fclose(output_file);
+
+    printf("Время выполнения программы: %lld микросекунд\n", time);
 
     return 0;
 

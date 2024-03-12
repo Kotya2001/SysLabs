@@ -5,20 +5,22 @@
 #include <stdlib.h>
 #include "assert.h"
 
-void* my_memcpy(void* dest, const void* src, size_t n) {
+void *
+my_memcpy(void* dest, const void* src, size_t n)
+{
     char* char_dest = (char*)dest;
     const char* char_src = (const char*)src;
 
-    for (size_t i = 0; i < n; i++) {
-        char_dest[i] = char_src[i];
-    }
+    for (size_t i = 0; i < n; i++) {char_dest[i] = char_src[i];}
 
     return dest;
 }
 
 
-void merge(void *array, int left, int center, int right, size_t element_size,
-           int (*comparator)(const void *, const void *)) {
+void
+merge(void *array, int left, int center, int right, size_t element_size,
+           int (*comparator)(const void *, const void *))
+{
 
     int left_size = center - left + 1;
     int right_size = right - center;
@@ -59,12 +61,13 @@ void merge(void *array, int left, int center, int right, size_t element_size,
     free(left_arr);
     free(right_arr);
 
-
 }
 
 
-void recursion(void *array, int left, int right, size_t element_size,
-               int (*comparator)(const void *, const void *)) {
+void
+recursion(void *array, int left, int right, size_t element_size,
+               int (*comparator)(const void *, const void *))
+{
     if (left < right) {
         int center = left + (right - left) / 2;
 
@@ -72,16 +75,21 @@ void recursion(void *array, int left, int right, size_t element_size,
         recursion(array, center + 1, right, element_size, comparator);
 
         merge(array, left, center, right, element_size, comparator);
+
     }
 }
 
 
-int mergesort(void *array, size_t elements, size_t element_size,
-              int (*comparator)(const void *, const void *)) {
+int
+mergesort(void *array, size_t elements, size_t element_size,
+              int (*comparator)(const void *, const void *))
+{
     recursion(array, 0, elements - 1, element_size, comparator);
     return 0;
 }
 
-int int_cmp(const void *a, const void *b) {
+int
+int_cmp(const void *a, const void *b)
+{
     return *(int*)a - *(int*)b;
 }
