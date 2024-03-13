@@ -1,9 +1,10 @@
 //
 // Created by Илья Белозеров on 05.02.2024.
 //
-#include "mergesort.h"
+#include "mysort.h"
 #include <stdlib.h>
 #include "assert.h"
+
 
 void *
 my_memcpy(void* dest, const void* src, size_t n)
@@ -66,25 +67,38 @@ merge(void *array, int left, int center, int right, size_t element_size,
 
 void
 recursion(void *array, int left, int right, size_t element_size,
-               int (*comparator)(const void *, const void *))
+               int (*comparator)(const void *, const void *),
+          long long *time_sleep)
 {
     if (left < right) {
+
+        struct timespec start_yield, end_yield;
+        long long time_yield;
+
         int center = left + (right - left) / 2;
 
-        recursion(array, left, center, element_size, comparator);
-        recursion(array, center + 1, right, element_size, comparator);
+        recursion(array, left, center, element_size, comparator, time_sleep);
+        recursion(array, center + 1, right, element_size, comparator, time_sleep);
 
         merge(array, left, center, right, element_size, comparator);
+
+        clock_gettime(CLOCK_MONOTONIC, &start_yield);
+        coro_yield();
+        clock_gettime(CLOCK_MONOTONIC, &end_yield);
+
+        time_yield = (end_yield.tv_sec - start_yield.tv_sec) * 1000000LL + (end_yield.tv_nsec - start_yield.tv_nsec) / 1e3;
+        *time_sleep += time_yield;
 
     }
 }
 
 
 int
-mergesort(void *array, size_t elements, size_t element_size,
-              int (*comparator)(const void *, const void *))
+mysort(void *array, size_t elements, size_t element_size,
+              int (*comparator)(const void *, const void *),
+          long long *time_sleep)
 {
-    recursion(array, 0, elements - 1, element_size, comparator);
+    recursion(array, 0, elements - 1, element_size, comparator, time_sleep);
     return 0;
 }
 

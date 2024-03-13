@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <time.h>
+
 struct
 array_t
 {
@@ -21,5 +23,13 @@ filenames_t
     int index;
     char **file_names;
 };
+
+//struct
+//coroutine_times_t
+//{
+//    struct timespec start_yield, end_yield;
+//    long long time_sleep = 0;
+//
+//};
 
 #endif //SYSLABS_UTILS_H
