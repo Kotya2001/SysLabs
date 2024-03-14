@@ -1,10 +1,7 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "libcoro.h"
-#include "structs.h"
 #include <limits.h>
 #include <time.h>
 #include "assert.h"
@@ -77,21 +74,20 @@ my_context_new(int i, char *name, int *total_numbers_count,
 }
 
 static void
-start(struct my_context *ctx)
+timer(struct my_context *ctx, char *command)
 {
     struct timespec time;
-    clock_gettime(CLOCK_MONOTONIC, &time);
-    ctx->sec_start = time.tv_sec;
-    ctx->nsec_start = time.tv_nsec;
-}
-
-static void
-stop(struct my_context *ctx)
-{
-    struct timespec time;
-    clock_gettime(CLOCK_MONOTONIC, &time);
-    ctx->sec_finish = time.tv_sec;
-    ctx->nsec_finish = time.tv_nsec;
+    if (strcmp("start", command) == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &time);
+        ctx->sec_start = time.tv_sec;
+        ctx->nsec_start = time.tv_nsec;
+    } else if (strcmp("stop", command) == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &time);
+        ctx->sec_finish = time.tv_sec;
+        ctx->nsec_finish = time.tv_nsec;
+    } else {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void
@@ -187,10 +183,10 @@ recursion(void *array, int left, int right, size_t element_size,
 
         merge(array, left, center, right, element_size, comparator);
 
-        stop(ctx);
+        timer(ctx, "stop");
         calc_time(ctx);
         coro_yield();
-        start(ctx);
+        timer(ctx, "start");
 
     }
 
@@ -220,7 +216,8 @@ coroutine_mergesort_file(void *context)
     struct my_context *ctx = context;
     int status;
 
-    start(ctx);
+    timer(ctx, "start");
+
     printf("Started coroutine %s\n", ctx->name);
 
     while (ctx->filenames_t->index < ctx->filenames_t->count) {
@@ -252,7 +249,7 @@ coroutine_mergesort_file(void *context)
 
     }
 
-    stop(ctx);
+    timer(ctx, "stop");
     calc_time(ctx);
 
     long long int switch_count = coro_switch_count(this);
@@ -309,32 +306,25 @@ main(int argc, char **argv)
 
     int min = INT_MAX;
     int array_index_min = 0;
-    int count_index = 0;
 
-    while (1){
+    for (int i = 0; i <= total_numbers_count; i++) {
         min = INT_MAX;
 
-        for (int i = 0; i < n_files; ++i) {
-            if (result[i] < array_s[i]->size){
-                int curr_elem = array_s[i]->array[result[i]];
+        for (int j = 0; j < n_files; j++) {
+            if (result[j] < array_s[j]->size){
+                int curr_elem = array_s[j]->array[result[j]];
                 if (curr_elem < min){
                     min = curr_elem;
-                    array_index_min = i;
+                    array_index_min = j;
                 }
             }
         }
         fprintf(output_file, "%d ", min);
-
-        result[array_index_min] += 1;
-
-        count_index++;
-        if (count_index == total_numbers_count){
-            break;
-        }
+        result[array_index_min]++;
     }
 
 
-    for (int i = 0; i < n_files; ++i){
+    for (int i = 0; i < n_files; i++){
         free(array_s[i]->array);
         free(array_s[i]);
     }
@@ -347,7 +337,6 @@ main(int argc, char **argv)
     time = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
 
     printf("Время выполнения программы: %d микросекунд\n", time);
-
     return 0;
 
 }
