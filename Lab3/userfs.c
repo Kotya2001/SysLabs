@@ -199,10 +199,7 @@ ssize_t ufs_write(int fd, const char *buf, size_t size) {
     }
     struct filedesc *filedesc = file_descriptors[fd - 1];
     struct file *file = filedesc->file;
-    if (!(filedesc->flags & (UFS_WRITE_ONLY | UFS_READ_WRITE))) {
-        ufs_error_code = UFS_ERR_NO_PERMISSION;
-        return -1;
-    }
+
     if (filedesc->block * BLOCK_SIZE + filedesc->block_pos + size > MAX_FILE_SIZE) {
         ufs_error_code = UFS_ERR_NO_MEM;
         return -1;
@@ -252,10 +249,7 @@ ssize_t ufs_read(int fd, char *buf, size_t size) {
     }
     struct filedesc *filedesc = file_descriptors[fd - 1];
     struct file *file = filedesc->file;
-    if (!(filedesc->flags & (UFS_READ_ONLY | UFS_READ_WRITE))) {
-        ufs_error_code = UFS_ERR_NO_PERMISSION;
-        return -1;
-    }
+
     size_t done = 0;
     struct block *block = file->block_list;
     for (int i = 0; i < filedesc->block; ++i) {
@@ -315,16 +309,14 @@ int ufs_delete(const char *filename) {
 
 #ifdef NEED_RESIZE
 int ufs_resize(int fd, size_t new_size) {
+
     if (ufs_validate_fd(fd)) {
         ufs_error_code = UFS_ERR_NO_FILE;
         return -1;
     }
     struct filedesc *filedesc = file_descriptors[fd - 1];
     struct file *file = filedesc->file;
-    if (!(filedesc->flags & (UFS_WRITE_ONLY | UFS_READ_WRITE))) {
-        ufs_error_code = UFS_ERR_NO_PERMISSION;
-        return -1;
-    }
+
     if (new_size > MAX_FILE_SIZE) {
         ufs_error_code = UFS_ERR_NO_MEM;
         return -1;
